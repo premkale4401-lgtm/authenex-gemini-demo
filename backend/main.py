@@ -146,3 +146,97 @@ async def analyze_email_api(payload: dict):
         "details": data,
         "analyzed_at": datetime.utcnow().isoformat() + "Z"
     }
+
+# ////////////////////////////////////
+from services.video_forensics import analyze_video
+
+@app.post("/analyze-video")
+async def analyze_video_api(file: UploadFile = File(...)):
+    file_type = get_file_type(file.filename)
+
+    if file_type != "video":
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported file type for video analysis"
+        )
+
+    video_path = save_upload_file(file, UPLOAD_DIR)
+
+    data = analyze_video(video_path)
+    trust_score, verdict, ai_prob, data = compute_trust(data)
+    explanation = generate_explanation(data, ai_prob)
+
+    return {
+        "file_name": file.filename,
+        "content_type": "video",
+        "trust_score": trust_score,
+        "deepfake_probability": ai_prob,
+        "verdict": verdict,
+        "explanation": explanation,
+        "details": data,
+        "analyzed_at": datetime.utcnow().isoformat() + "Z"
+    }
+# ///////////////////////////////////////////
+
+from services.audio_forensics import analyze_audio
+
+@app.post("/analyze-audio")
+async def analyze_audio_api(file: UploadFile = File(...)):
+    file_type = get_file_type(file.filename)
+
+    if file_type != "audio":
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported file type for audio analysis"
+        )
+
+    audio_path = save_upload_file(file, UPLOAD_DIR)
+
+    data = analyze_audio(audio_path)
+    trust_score, verdict, ai_prob, data = compute_trust(data)
+    explanation = generate_explanation(data, ai_prob)
+
+    return {
+        "file_name": file.filename,
+        "content_type": "audio",
+        "trust_score": trust_score,
+        "deepfake_probability": ai_prob,
+        "verdict": verdict,
+        "explanation": explanation,
+        "details": data
+    }
+
+
+# //////////////////////////////////////////////////////////////
+
+
+from services.document_forensics import analyze_document
+
+@app.post("/analyze-document")
+async def analyze_document_api(file: UploadFile = File(...)):
+    file_type = get_file_type(file.filename)
+
+    if file_type not in ["document"]:
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported file type for document analysis"
+        )
+
+    doc_path = save_upload_file(file, UPLOAD_DIR)
+
+    # Determine extension
+    ext = file.filename.lower().split(".")[-1]
+    data = analyze_document(doc_path, ext)
+
+    trust_score, verdict, ai_prob, data = compute_trust(data)
+    explanation = generate_explanation(data, ai_prob)
+
+    return {
+        "file_name": file.filename,
+        "content_type": "document",
+        "trust_score": trust_score,
+        "deepfake_probability": ai_prob,
+        "verdict": verdict,
+        "explanation": explanation,
+        "details": data
+    }
